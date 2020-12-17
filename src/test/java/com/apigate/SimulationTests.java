@@ -93,4 +93,14 @@ public class SimulationTests {
 			e.printStackTrace();
 		}
 	}
+	
+	public static void main(String[] args) {
+		JSONObject jsonData = new JSONObject();
+		jsonData.set("processCode", Command.login.getProcessCode());
+		jsonData.set("phone", "15992486263");
+		jsonData.set("smsCode", "xjj123456");
+		jsonData.set("iemi", "iemi");
+		jsonData.set("pushToken", "pushToken");
+		System.out.println(jsonData.toString());
+	}
 }

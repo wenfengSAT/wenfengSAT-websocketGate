@@ -5,6 +5,8 @@ import org.springframework.stereotype.Component;
 
 import com.apigate.constant.Const;
 
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSON;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -23,27 +25,34 @@ public class LoginHandler implements C2SMessageHandler {
 
 	@Override
 	public JSON handlerMessage(StringBuilder iemiBuilder, JSONObject jsonData) {
-		String phone = "";
-		String smsCode = "";
-
-		log.debug("LoginHandler Message，请求参数 = {}", jsonData.toString());
-		if (jsonData.containsKey("phone")) {
-			phone = jsonData.getStr("phone");
+		String userId = "";
+		String password = "";
+		String iemi = "";
+		String pushToken = "";
+		log.debug("C2SLoginMessage，请求参数 = {}", jsonData.toString());
+		if (jsonData.containsKey("userId")) {
+			userId = jsonData.getStr("userId");
 		}
-		if (jsonData.containsKey("smsCode")) {
-			smsCode = jsonData.getStr("smsCode");
+		if (jsonData.containsKey("password")) {
+			password = jsonData.getStr("password");
 		}
-
-		JSON retObj = JSONUtil.createObj().set("code", -1);
+		if (jsonData.containsKey("iemi")) {
+			iemi = jsonData.getStr("iemi");
+		}
+		if (jsonData.containsKey("pushToken")) {
+			pushToken = jsonData.getStr("pushToken");
+		}
+		JSON retObj = JSONUtil.createObj().set("code", 0).set("accessToken", RandomUtil.simpleUUID());
 		//
 		JSONObject obj = JSONUtil.parseObj(retObj);
 		if (obj.containsKey("accessToken") && obj.getInt("code") == Const.ERROR_CODE_SUCCESS) {
-
+			log.debug("accessToken = {}, accessToken = {}, SessionId = {}", userId, obj.getStr("accessToken"),
+					jsonData.getStr("SessionId", StrUtil.EMPTY));
 			iemiBuilder.delete(0, iemiBuilder.length());
 			// 关联IEMI
-			iemiBuilder.append(phone);
+			iemiBuilder.append(userId);
 		}
-		log.debug("phone = {}, smsCode = {}, LoginHandler Message，处理完毕，回复  = {}", phone, smsCode, retObj.toString());
+		log.debug("UserId = {}, C2SLoginMessage，处理完毕，回复  = {}", userId, retObj.toString());
 		return retObj;
 	}
 

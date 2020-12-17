@@ -15,7 +15,7 @@ import com.apigate.message.LogoutHandler;
 public enum Command {
 
 	login("login", LoginHandler.class, "登录接口"), 
-	logout("login", LogoutHandler.class, "登出接口"),;
+	logout("logout", LogoutHandler.class, "登出接口"),;
 
 	public String processCode;// 服务编码
 	public Class<?> service;// 服务接口类

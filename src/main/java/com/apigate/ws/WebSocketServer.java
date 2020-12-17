@@ -104,15 +104,23 @@ public class WebSocketServer {
 	 * 收到客户端消息后调用的方法
 	 *
 	 * @param message 客户端发送过来的消息
+	 * @throws IOException
 	 * @throws Exception
 	 */
 	@OnMessage
-	public void onMessage(Session session, String message) {
+	public void onMessage(Session session, String message) throws IOException {
+		if (!JSONUtil.isJson(message)) {
+			// 消息错误，不是json指令
+			sendMessage(errorMsg().toString());
+			return;
+		}
 		//
 		JSONObject jsonData = JSONUtil.parseObj(message);
 		if (!jsonData.containsKey("processCode")) {
 			log.debug("UserId = {}, 通道ID={}, 上行内容={}, 上行请求非法，缺少command参数, 处理结束", iemiBuilder.toString(),
 					session.id().asShortText(), message);
+			// 指令错误
+			sendMessage(errorMsg().toString());
 			return;
 		}
 		String processCode = jsonData.getStr("processCode");
@@ -190,5 +198,12 @@ public class WebSocketServer {
 	public Long getOnlineCount() {
 		Long onlineCount = 0L;
 		return onlineCount;
+	}
+
+	public JSONObject errorMsg() {
+		JSONObject msg = new JSONObject();
+		msg.set("code", "-1");
+		msg.set("msg", "消息格式错误，请重新发送!");
+		return msg;
 	}
 }
