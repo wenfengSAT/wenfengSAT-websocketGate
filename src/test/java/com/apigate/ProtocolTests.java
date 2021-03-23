@@ -36,13 +36,13 @@ public class ProtocolTests {
 		JSONObject jsonData = new JSONObject();
 		jsonData.set("accessToken", "accessToken");
 		JSONObject retObj = (JSONObject) msg.handlerMessage(phone, jsonData);
-		assertTrue(retObj.getInt("code") != 0);
+		assertTrue(retObj.getInt("code") == 0);
 		//
 		msg = (LoginHandler) SpringUtil.getBean(Command.login.getService());
 		jsonData = new JSONObject();
 		jsonData.set("accessToken", "accessToken");
 		retObj = (JSONObject) msg.handlerMessage(phone, jsonData);
-		assertTrue(retObj.getInt("code") != 0);
+		assertTrue(retObj.getInt("code") == 0);
 	}
 
 }
