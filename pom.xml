@@ -8,9 +8,9 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>desaysv</groupId>
-	<artifactId>websocketGate</artifactId>
+	<artifactId>wenfengSAT-websocketGate</artifactId>
 	<version>v1.0.0</version>
-	<name>websocketGate</name>
+	<name>wenfengSAT-websocketGate</name>
 	<description>websocket apigate</description>
 
 	<properties>
