@@ -1,6 +1,9 @@
 package com.apigate.message;
 
-import cn.hutool.json.JSON;
+import org.yeauty.pojo.Session;
+
+import com.apigate.util.JsonResult;
+
 import cn.hutool.json.JSONObject;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
@@ -18,11 +21,17 @@ public interface C2SMessageHandler {
 	Log log = LogFactory.get();
 
 	/**
-	 * 处理类、处理方法
 	 * 
-	 * @param jsonData 手机端上传的数据
-	 * @return 处理结果
+	 * @Description： 消息处理方法(客户端->服务端)
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月2日下午5:03:23]
+	 * @param processCode-请求编码
+	 * @param session-会话
+	 * @param req-请求参数
+	 * @return
+	 *
 	 */
-	JSON handlerMessage(StringBuilder vin, JSONObject jsonData);
+	JsonResult handlerMessage(String processCode, Session session, JSONObject req);
 
 }

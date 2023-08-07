@@ -1,8 +1,7 @@
 package com.apigate.constant;
 
-
-import com.apigate.message.LoginHandler;
-import com.apigate.message.LogoutHandler;
+import com.apigate.message.impl.LoginHandler;
+import com.apigate.message.impl.LogoutHandler;
 
 /**
  * 
@@ -38,7 +37,7 @@ public enum Command {
 	public String getDesc() {
 		return desc;
 	}
-	
+
 	public static Command getCommand(String processCode) {
 		for (Command command : Command.values()) {
 			if (command.processCode.equals(processCode)) {
@@ -47,7 +46,7 @@ public enum Command {
 		}
 		return null;
 	}
-	
+
 	public static Class<?> getService(String processCode) {
 		for (Command command : Command.values()) {
 			if (command.processCode.equals(processCode)) {
@@ -56,6 +55,14 @@ public enum Command {
 		}
 		return null;
 	}
-	
+
+	public static boolean isTrueProcessCode(String processCode) {
+		for (Command command : Command.values()) {
+			if (command.processCode.equals(processCode)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 }

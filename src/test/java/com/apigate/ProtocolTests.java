@@ -9,8 +9,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.apigate.constant.Command;
 import com.apigate.message.C2SMessageHandler;
-import com.apigate.message.LoginHandler;
-import com.apigate.message.LogoutHandler;
+import com.apigate.message.impl.LoginHandler;
+import com.apigate.message.impl.LogoutHandler;
 import com.apigate.util.SpringUtil;
 
 import cn.hutool.json.JSONObject;
@@ -27,21 +27,19 @@ import cn.hutool.json.JSONObject;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class ProtocolTests {
 
-	private StringBuilder phone = new StringBuilder("15992486263");
-
 	@Test
 	public void testProtocol() {
 		//
 		C2SMessageHandler msg = (LogoutHandler) SpringUtil.getBean(Command.logout.getService());
 		JSONObject jsonData = new JSONObject();
 		jsonData.set("accessToken", "accessToken");
-		JSONObject retObj = (JSONObject) msg.handlerMessage(phone, jsonData);
+		JSONObject retObj = (JSONObject) msg.handlerMessage(Command.logout.getProcessCode(), null, jsonData);
 		assertTrue(retObj.getInt("code") == 0);
 		//
 		msg = (LoginHandler) SpringUtil.getBean(Command.login.getService());
 		jsonData = new JSONObject();
 		jsonData.set("accessToken", "accessToken");
-		retObj = (JSONObject) msg.handlerMessage(phone, jsonData);
+		retObj = (JSONObject) msg.handlerMessage(Command.login.getProcessCode(), null, jsonData);
 		assertTrue(retObj.getInt("code") == 0);
 	}
 

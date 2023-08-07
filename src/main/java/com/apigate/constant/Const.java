@@ -22,18 +22,18 @@ public interface Const {
 	 * Bean标识定义
 	 */
 	public static final String BEAN_DEF = "Message";
-	/////////////////////////////////////////////////////////////////////
+
 	/**
 	 * 获取AccessToken
 	 */
 	public static final String accessToken = "AccessToken";
+	
+	/**
+	 * 在线用户数量
+	 */
+	public static final String onlineCountKey = "OnlineCount_WebsocketGate";
+	
+	
 
-	// 返回码
-	public static final int ERROR_CODE_0 = 0;
-	public static final int ERROR_CODE_SUCCESS = ERROR_CODE_0;
-	public static final String ERROR_CODE_0_DESP = "操作成功";
-	//
-	public static final int ERROR_CODE_10001 = 10001;
-	public static final String ERROR_CODE_10001_DESP = "手机请求参数不合法";
 
 }

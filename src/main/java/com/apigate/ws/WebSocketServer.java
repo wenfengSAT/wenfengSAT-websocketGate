@@ -1,14 +1,19 @@
 package com.apigate.ws;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.util.MultiValueMap;
+import org.yeauty.annotation.BeforeHandshake;
+import org.yeauty.annotation.OnBinary;
 import org.yeauty.annotation.OnClose;
 import org.yeauty.annotation.OnError;
+import org.yeauty.annotation.OnEvent;
 import org.yeauty.annotation.OnMessage;
 import org.yeauty.annotation.OnOpen;
 import org.yeauty.annotation.PathVariable;
@@ -16,18 +21,25 @@ import org.yeauty.annotation.RequestParam;
 import org.yeauty.annotation.ServerEndpoint;
 import org.yeauty.pojo.Session;
 
+import com.apigate.constant.ApigateRetCode;
 import com.apigate.constant.Command;
+import com.apigate.constant.Const;
 import com.apigate.message.C2SMessageHandler;
+import com.apigate.util.JsonResult;
 import com.apigate.util.SpringUtil;
 
 import cn.hutool.core.net.NetUtil;
-import cn.hutool.json.JSON;
+import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.timeout.IdleStateEvent;
 
 /**
  * 
@@ -46,164 +58,345 @@ public class WebSocketServer {
 
 	private static Log log = LogFactory.get();
 
-	// concurrent包的线程安全Set，用来存放每个客户端对应的MyWebSocket对象。
+	// 保存已连接会话
 	private static CopyOnWriteArraySet<WebSocketServer> webSocketSet = new CopyOnWriteArraySet<WebSocketServer>();
-
-	// 与某个客户端的连接会话，需要通过它来给客户端发送数据
+	// 保存已登录会话
+	private static ConcurrentHashMap<String, Session> clients = new ConcurrentHashMap<>();
+	// 客户端的连接会话
 	private Session session;
 	// 本次登录使用的IP
 	private String localIP;
-	// 接收sid
-	protected StringBuilder iemiBuilder = new StringBuilder();
+
+	@Autowired
+	private StringRedisTemplate stringRedisTemplate;
 
 	/**
-	 * 连接建立成功调用的方法
+	 * 
+	 * @Description： 当有新的连接进入时，对该方法进行回调
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:03:29]
+	 * @param session
+	 * @param headers
+	 * @param req
+	 * @param reqMap
+	 * @param arg
+	 * @param pathMap
+	 *
+	 */
+	@BeforeHandshake
+	public void handshake(Session session, HttpHeaders headers, @RequestParam String req,
+			@RequestParam MultiValueMap<String, Object> reqMap, @PathVariable String arg,
+			@PathVariable Map<String, Object> pathMap) {
+		session.setSubprotocols("stomp");
+		if (!"ok".equals(req)) {
+			System.out.println("Authentication failed!");
+			// session.close();
+		}
+	}
+
+	/**
+	 * 
+	 * @Description： 当有新的WebSocket连接完成时，对该方法进行回调
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:03:46]
+	 * @param session
+	 * @param headers
+	 * @param req
+	 * @param reqMap
+	 * @param arg
+	 * @param pathMap
+	 *
 	 */
 	@OnOpen
 	public void onOpen(Session session, HttpHeaders headers, @RequestParam String req,
 			@RequestParam MultiValueMap<String, Object> reqMap, @PathVariable String arg,
 			@PathVariable Map<String, Object> pathMap) {
 		this.session = session;
+		this.localIP = NetUtil.getLocalMacAddress();
 		webSocketSet.add(this); // 加入set中
 		addOnlineCount(); // 在线数加1
-		log.debug("UserId = {}, 通道ID={}, 当前连接人数={}", iemiBuilder.toString(), session.id().asShortText(),
-				getOnlineCount());
 	}
 
 	/**
-	 * 连接关闭调用的方法
-	 *
+	 * 
+	 * @Description： 当有WebSocket连接关闭时，对该方法进行回调
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:04:03]
+	 * @param session
 	 * @throws IOException
+	 *
 	 */
 	@OnClose
 	public void onClose(Session session) throws IOException {
 		webSocketSet.remove(this); // 从set中删除
 		subOnlineCount(); // 在线数减1
-		log.warn("UserId = {}, 通道ID = {}, 有一连接关闭！当前在线人数={}", this.iemiBuilder.toString(), session.id().asShortText(),
-				getOnlineCount());
-		iemiBuilder.delete(0, iemiBuilder.length());
 		session.close();
 	}
 
 	/**
-	 * 出错方法
-	 *
+	 * 
+	 * @Description： 当有WebSocket抛出异常时，对该方法进行回调
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:18:06]
+	 * @param session
+	 * @param cause
 	 * @throws IOException
+	 *
 	 */
 	@OnError
 	public void onError(Session session, Throwable cause) throws IOException {
-		if (Objects.nonNull(this.session) && Objects.nonNull(cause) && !(cause instanceof EOFException)) {
-			log.error("UserId = {}, 通道ID={}, 出错信息={}", iemiBuilder.toString(), this.session.id(), cause.toString());
-		}
+		log.error(cause.getMessage());
 		if (Objects.nonNull(session) && session.isOpen()) {
-			session.close();
+			// session.close();
 		}
 	}
 
 	/**
-	 * 收到客户端消息后调用的方法
+	 * 
+	 * @Description： 当接收到二进制消息时，对该方法进行回调
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:18:18]
+	 * @param session
+	 * @param bytes
 	 *
-	 * @param message 客户端发送过来的消息
+	 */
+	@OnBinary
+	public void onBinary(Session session, byte[] bytes) {
+		for (byte b : bytes) {
+			System.out.println(b);
+		}
+		session.sendBinary(bytes);
+	}
+
+	/**
+	 * 
+	 * @Description： 当接收到字符串消息时，对该方法进行回调
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:36:19]
+	 * @param session
+	 * @param message
 	 * @throws IOException
-	 * @throws Exception
+	 *
 	 */
 	@OnMessage
 	public void onMessage(Session session, String message) throws IOException {
-		if (!JSONUtil.isJson(message)) {
-			// 消息错误，不是json指令
-			sendMessage(errorMsg().toString());
+		if (!JSONUtil.isTypeJSON(message)) {
+			log.error("【message:{}】message is not json!", message);
+			sendMessage(JsonResult.error(ApigateRetCode.MEDIATYPENOTSUPPORTED));
 			return;
 		}
-		//
-		JSONObject jsonData = JSONUtil.parseObj(message);
-		if (!jsonData.containsKey("processCode")) {
-			log.debug("UserId = {}, 通道ID={}, 上行内容={}, 上行请求非法，缺少command参数, 处理结束", iemiBuilder.toString(),
-					session.id().asShortText(), message);
-			// 指令错误
-			sendMessage(errorMsg().toString());
+		JSONObject req = JSONUtil.parseObj(message);
+		if (!req.containsKey("processCode")) {
+			log.error("【message:{}】processCode is null!", message);
+			sendMessage(JsonResult.error(ApigateRetCode.PROCESS_CODE_ERROR));
 			return;
 		}
-		String processCode = jsonData.getStr("processCode");
+		String processCode = req.getStr("processCode");
+		if (!Command.isTrueProcessCode(processCode)) {
+			log.error("【message:{}】processCode is not exist!", message);
+			sendMessage(JsonResult.error(ApigateRetCode.PROCESS_CODE_ERROR));
+			return;
+		}
 		Class<?> service = Command.getService(processCode);
-		//
-		JSONObject logData = JSONUtil.parseObj(message);
-		log.info("UserId = {}, 通道ID={}, 处理类={}, 开始处理，请求内容={}", iemiBuilder.toString(), session.id().asShortText(),
-				service, logData.toString());
-		// 通过command指令获取对应的消息处理类
-		C2SMessageHandler aepMessage = null;
+		C2SMessageHandler messageHandler = null;
 		try {
-			aepMessage = (C2SMessageHandler) SpringUtil.getBean(service);
+			messageHandler = (C2SMessageHandler) SpringUtil.getBean(service);
 		} catch (Exception e) {
-			log.error("UserId = {}, 通道ID = {}, 未找到协议头 = {} 的处理类", iemiBuilder.toString(), session.id().asShortText(),
-					service);
-
+			log.error("【processCode:{}】 get messageHandler bean fail!", processCode);
+			sendMessage(JsonResult.error(ApigateRetCode.SYSTEM_EXCEPTION));
 			return;
 		}
-		// 回应客户端S2C
 		try {
-			localIP = NetUtil.getLocalMacAddress();
-			// 保存本机IP
-			jsonData.set("SessionId", session.id().asShortText());
-			jsonData.set("LocalIP", localIP);
-			JSON json = aepMessage.handlerMessage(iemiBuilder, jsonData);
-			//
-			jsonData = new JSONObject();
-			jsonData.set("command", processCode);
-			jsonData.set("data", json);
-			String value = jsonData.toString();
-			ChannelFuture future = sendMessage(value);
-			log.info("UserId = {}, 通道ID = {}, 返回内容 = {}, future = {}, 处理结束", iemiBuilder.toString(),
-					session.id().asShortText(), logData.toString(), future.toString());
+			req.set("sessionId", session.id().asShortText());
+			req.set("localIP", localIP);
+			JsonResult result = messageHandler.handlerMessage(processCode, session, req);
+			sendMessage(result);
 		} catch (Exception e) {
-			log.error("UserId = {}, 通道ID={}, 解析执行出错信息={}", iemiBuilder.toString(), session.id().asShortText(),
-					e.getMessage());
+			log.error("【processCode:{}】【message:{}】messageHandler error!", processCode, message);
+			sendMessage(JsonResult.error(ApigateRetCode.SYSTEM_EXCEPTION));
+			return;
 		}
 	}
 
 	/**
-	 * 群发、或单发自定义消息
+	 * 
+	 * @Description： 当接收到Netty的事件时，对该方法进行回调
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:36:30]
+	 * @param session
+	 * @param evt
+	 *
 	 */
-	public static void sendInfo(JSONObject message, String userId) {
-		for (WebSocketServer item : webSocketSet) {
-			// 这里可以设定只推送给这个vin，为null则全部推送
-			try {
-				if (userId == null) {
-					item.sendMessage(message.toString());
-				} else if (item.iemiBuilder.toString().equals(userId)) {
-					item.sendMessage(message.toString());
-					log.debug("UserId = {}, 通道ID = {}, 下发成功，内容 = {}", userId, item.session.id().asShortText(),
-							message.toString());
-				}
-			} catch (IOException e) {
-				log.error("UserId = {}, 通道ID = {}, 下发失败 = {}", userId, item.session.id().asShortText(), e.getMessage());
+	@OnEvent
+	public void onEvent(Session session, Object evt) {
+		if (evt instanceof IdleStateEvent) {
+			IdleStateEvent idleStateEvent = (IdleStateEvent) evt;
+			switch (idleStateEvent.state()) {
+			case READER_IDLE:
+				System.out.println("read idle");
+				break;
+			case WRITER_IDLE:
+				System.out.println("write idle");
+				break;
+			case ALL_IDLE:
+				System.out.println("all idle");
+				break;
+			default:
+				break;
 			}
 		}
 	}
 
 	/**
-	 * 实现服务器主动推送
+	 * 
+	 * @Description： 实现服务器主动推送
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:13:34]
+	 * @param message
+	 * @return
+	 * @throws IOException
+	 *
 	 */
-	public ChannelFuture sendMessage(String message) throws IOException {
-		return this.session.sendText(message);
+	public ChannelFuture sendMessage(JSONObject message) throws IOException {
+		return this.session.sendText(message.toString());
 	}
 
+	/**
+	 * 
+	 * @Description： 广播自定义消息
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:36:47]
+	 * @param message
+	 * @param userId
+	 *
+	 */
+	public static JsonResult sendMsgToAnyone(JSONObject message) {
+		for (WebSocketServer item : webSocketSet) {
+			try {
+				item.sendMessage(message);
+			} catch (IOException e) {
+				return JsonResult.error(ApigateRetCode.SYSTEM_EXCEPTION);
+			}
+		}
+		return JsonResult.success();
+	}
+
+	/**
+	 * 
+	 * @Description： 根据用户ID发送消息
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月2日下午5:30:30]
+	 * @param message
+	 * @param userId
+	 * @return
+	 *
+	 */
+	public static JsonResult sendMsgByUserId(JSONObject message, String userId) {
+		if (StrUtil.isBlank(userId)) {
+			log.error("sendMsgByUserId fail, userId is null!");
+			return JsonResult.error(ApigateRetCode.MSG_SEND_ERROR);
+		}
+		Session session = clients.get(userId);
+		if (ObjectUtil.isNull(clients.get(userId))) {
+			log.error("sendMsgByUserId fail, user is logout!");
+			return JsonResult.error(ApigateRetCode.MSG_SEND_ERROR);
+		}
+		for (WebSocketServer item : webSocketSet) {
+			try {
+				if (item.session.id().asShortText().equals(session.id().asShortText())) {
+					ChannelFuture future = item.sendMessage(message);
+					future.addListener(new ChannelFutureListener() {
+						@Override
+						public void operationComplete(ChannelFuture future) throws Exception {
+							log.debug("【userId:{}】sendMsgByUserId success", userId);
+						}
+					});
+				}
+			} catch (IOException e) {
+				log.error("sendMsgByUserId error, {}", e);
+				return JsonResult.error(ApigateRetCode.SYSTEM_EXCEPTION);
+			}
+		}
+		return JsonResult.success();
+	}
+
+	/**
+	 * 
+	 * @Description： 在线用户+1
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:10:58]
+	 *
+	 */
 	private void addOnlineCount() {
-
+		stringRedisTemplate.opsForValue().increment(Const.onlineCountKey);
 	}
 
+	/**
+	 * 
+	 * @Description： 在线用户-1
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:11:21]
+	 *
+	 */
 	private void subOnlineCount() {
-
+		stringRedisTemplate.opsForValue().decrement(Const.onlineCountKey);
 	}
 
-	public Long getOnlineCount() {
-		Long onlineCount = 0L;
+	/**
+	 * 
+	 * @Description： 在线用户数
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月1日下午4:11:31]
+	 * @return
+	 *
+	 */
+	public long getOnlineCount() {
+		String onlineCountValue = stringRedisTemplate.opsForValue().get(Const.onlineCountKey);
+		if (StrUtil.isBlank(onlineCountValue) || !NumberUtil.isNumber(onlineCountValue)) {
+			return 0l;
+		}
+		Long onlineCount = Long.parseLong(onlineCountValue);
 		return onlineCount;
+
 	}
 
-	public JSONObject errorMsg() {
-		JSONObject msg = new JSONObject();
-		msg.set("code", "-1");
-		msg.set("msg", "消息格式错误，请重新发送!");
-		return msg;
+	/**
+	 * 
+	 * @Description： 获取当前在线客户端对应的WebSocket对象
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月2日下午4:38:28]
+	 * @return
+	 *
+	 */
+	public static CopyOnWriteArraySet<WebSocketServer> getWebSocketSet() {
+		return webSocketSet;
 	}
+
+	/**
+	 * 
+	 * @Description： 获取当前在线客户端一登录用户的会话
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月2日下午4:49:17]
+	 * @return
+	 *
+	 */
+	public static ConcurrentHashMap<String, Session> getWebSocketSessionMap() {
+		return clients;
+	}
+
 }
