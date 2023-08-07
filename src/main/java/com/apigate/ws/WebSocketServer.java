@@ -132,6 +132,9 @@ public class WebSocketServer {
 	@OnClose
 	public void onClose(Session session) throws IOException {
 		webSocketSet.remove(this); // 从set中删除
+		clients.entrySet().stream()// 删除掉线用户登录会话
+				.filter(client -> session.id().asLongText().equals(client.getValue().id().asLongText()))
+				.forEach(client -> clients.remove(client.getKey()));
 		subOnlineCount(); // 在线数减1
 		session.close();
 	}
