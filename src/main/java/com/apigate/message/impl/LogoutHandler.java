@@ -26,11 +26,11 @@ public class LogoutHandler implements C2SMessageHandler {
 
 	@Override
 	public JsonResult handlerMessage(String processCode, Session session, JSONObject req) {
-		String phone = req.getStr("phone");
-		if (StrUtil.isBlank(phone)) {
+		String uid = req.getStr("uid");
+		if (StrUtil.isBlank(uid)) {
 			return JsonResult.error(ApigateRetCode.ERROR_PARAM);
 		}
-		WebSocketServer.getWebSocketSessionMap().remove(phone);
+		WebSocketServer.removeLoginSession(uid);
 		return JsonResult.success();
 	}
 

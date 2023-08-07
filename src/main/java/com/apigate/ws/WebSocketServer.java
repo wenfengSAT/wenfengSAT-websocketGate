@@ -132,9 +132,7 @@ public class WebSocketServer {
 	@OnClose
 	public void onClose(Session session) throws IOException {
 		webSocketSet.remove(this); // 从set中删除
-		clients.entrySet().stream()// 删除掉线用户登录会话
-				.filter(client -> session.id().asLongText().equals(client.getValue().id().asLongText()))
-				.forEach(client -> clients.remove(client.getKey()));
+		removeLoginSession(session);// 删除掉线用户登录会话
 		subOnlineCount(); // 在线数减1
 		session.close();
 	}
@@ -314,6 +312,13 @@ public class WebSocketServer {
 			log.error("sendMsgByUserId fail, user is logout!");
 			return JsonResult.error(ApigateRetCode.MSG_SEND_ERROR);
 		}
+		if (!webSocketSet.stream()
+				.filter(webSocket -> webSocket.session.id().asShortText().equals(session.id().asShortText())).findAny()
+				.isPresent()) {
+			log.error("sendMsgByUserId fail, user is logout!");
+			removeLoginSession(session);
+			return JsonResult.error(ApigateRetCode.MSG_SEND_ERROR);
+		}
 		for (WebSocketServer item : webSocketSet) {
 			try {
 				if (item.session.id().asShortText().equals(session.id().asShortText())) {
@@ -400,6 +405,34 @@ public class WebSocketServer {
 	 */
 	public static ConcurrentHashMap<String, Session> getWebSocketSessionMap() {
 		return clients;
+	}
+
+	/**
+	 * 
+	 * @Description： 删除掉线用户登录会话
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月7日下午2:58:01]
+	 * @param session
+	 *
+	 */
+	public static void removeLoginSession(Session session) {
+		clients.entrySet().stream()
+				.filter(client -> session.id().asLongText().equals(client.getValue().id().asLongText()))
+				.forEach(client -> clients.remove(client.getKey()));
+	}
+
+	/**
+	 * 
+	 * @Description： 删除掉线用户登录会话
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月7日下午3:01:59]
+	 * @param uid
+	 *
+	 */
+	public static void removeLoginSession(String uid) {
+		clients.remove(uid);
 	}
 
 }
