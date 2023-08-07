@@ -46,6 +46,10 @@ public class MessageController {
 	 * 
 	 * @Description： 测试消息下发
 	 * 
+	 * MSG：{"processCode":"login","uid":"xxxxx"}
+	 * 
+	 * MSG：{"processCode":"logout","uid":"xxxxx"}
+	 * 
 	 * URL：localhost:8080/api/msg/test/push/xxxxx
 	 * 
 	 * @author [ wenfengSAT@163.com ]
