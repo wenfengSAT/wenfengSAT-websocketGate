@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="60 seconds" debug="false">
-    <property name="PROJECT_NAME" value="demo"/>
+    <property name="PROJECT_NAME" value="websocketGate"/>
     <property name="APP_NAME" value="websock-gate"/>
     <property name="LOG_PATH" value="/data/logs/${PROJECT_NAME}-${APP_NAME}"/>
     <property name="Max_History" value="7"/>

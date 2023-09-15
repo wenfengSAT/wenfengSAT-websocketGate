@@ -19,7 +19,7 @@ public enum ApigateRetCode implements CodeEnum {
 	/**
 	 * 成功
      */
-	SUCCESS(0, "sucess!"),
+	SUCCESS(200, "sucess!"),
 
     /**
       * 错误码
