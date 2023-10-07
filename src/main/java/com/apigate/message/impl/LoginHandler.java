@@ -14,6 +14,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSON;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 
@@ -23,6 +24,7 @@ import cn.hutool.json.JSONUtil;
  * @Modified By： [修改人] on [修改日期] for [修改说明]
  *
  */
+@Slf4j
 @Component
 @Configuration
 public class LoginHandler implements C2SMessageHandler {

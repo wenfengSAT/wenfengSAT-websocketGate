@@ -35,12 +35,11 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.timeout.IdleStateEvent;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 
@@ -54,10 +53,9 @@ import io.netty.handler.timeout.IdleStateEvent;
  * @Modified By： [修改人] on [修改日期] for [修改说明]
  *
  */
+@Slf4j
 @ServerEndpoint(port = "${ws.port}", path = "/mobile/{version}", maxFramePayloadLength = "6553600")
 public class WebSocketServer {
-
-	private static Log log = LogFactory.get();
 
 	// 保存已连接会话
 	private static CopyOnWriteArraySet<WebSocketServer> webSocketSet = new CopyOnWriteArraySet<WebSocketServer>();

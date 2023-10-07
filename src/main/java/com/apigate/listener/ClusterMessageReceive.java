@@ -9,8 +9,7 @@ import com.apigate.ws.WebSocketServer;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 
@@ -20,10 +19,10 @@ import cn.hutool.log.LogFactory;
  * @Modified By： [修改人] on [修改日期] for [修改说明]
  *
  */
+@Slf4j
 @Component
 public class ClusterMessageReceive implements MessageListener {
 
-	private static Log log = LogFactory.get();
 
 	/**
 	 * 

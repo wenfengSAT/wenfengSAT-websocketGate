@@ -5,8 +5,6 @@ import org.yeauty.pojo.Session;
 import com.apigate.util.JsonResult;
 
 import cn.hutool.json.JSONObject;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
 
 /**
  * 
@@ -17,8 +15,6 @@ import cn.hutool.log.LogFactory;
  *
  */
 public interface C2SMessageHandler {
-
-	Log log = LogFactory.get();
 
 	/**
 	 * 

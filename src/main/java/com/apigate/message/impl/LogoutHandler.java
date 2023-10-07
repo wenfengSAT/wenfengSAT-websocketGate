@@ -11,6 +11,7 @@ import com.apigate.ws.WebSocketServer;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 
@@ -20,6 +21,7 @@ import cn.hutool.json.JSONObject;
  * @Modified By： [修改人] on [修改日期] for [修改说明]
  *
  */
+@Slf4j
 @Component
 @Configuration
 public class LogoutHandler implements C2SMessageHandler {
@@ -28,6 +30,7 @@ public class LogoutHandler implements C2SMessageHandler {
 	public JsonResult handlerMessage(String processCode, Session session, JSONObject req) {
 		String uid = req.getStr("uid");
 		if (StrUtil.isBlank(uid)) {
+			log.error("【processCode:{}】 uid is null!",processCode);
 			return JsonResult.error(ApigateRetCode.ERROR_PARAM);
 		}
 		WebSocketServer.removeLoginSession(uid);
