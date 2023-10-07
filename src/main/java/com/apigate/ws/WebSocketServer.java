@@ -29,6 +29,7 @@ import com.apigate.util.JsonResult;
 import com.apigate.util.SpringUtil;
 
 import cn.hutool.core.net.NetUtil;
+import cn.hutool.core.util.HexUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -89,10 +90,8 @@ public class WebSocketServer {
 			@RequestParam MultiValueMap<String, Object> reqMap, @PathVariable String arg,
 			@PathVariable Map<String, Object> pathMap) {
 		session.setSubprotocols("stomp");
-		if (!"ok".equals(req)) {
-			System.out.println("Authentication failed!");
-			// session.close();
-		}
+		log.info("【req:{}】【arg:{}】【reqMap:{}】【pathMap:{}】handshake!", session.id(), req, arg,
+				JSONUtil.toJsonStr(reqMap), JSONUtil.toJsonStr(pathMap));
 	}
 
 	/**
@@ -150,7 +149,7 @@ public class WebSocketServer {
 	 */
 	@OnError
 	public void onError(Session session, Throwable cause) throws IOException {
-		log.error(cause.getMessage());
+		log.error("【sessionId:{}】onError {}!", session.id(), cause.getMessage());
 		if (Objects.nonNull(session) && session.isOpen()) {
 			// session.close();
 		}
@@ -168,9 +167,8 @@ public class WebSocketServer {
 	 */
 	@OnBinary
 	public void onBinary(Session session, byte[] bytes) {
-		for (byte b : bytes) {
-			System.out.println(b);
-		}
+		String hexStr = HexUtil.encodeHexStr(bytes, false);
+		log.info("【sessionId:{}】onBinary message:{}!", session.id(), hexStr);
 		session.sendBinary(bytes);
 	}
 
@@ -241,13 +239,13 @@ public class WebSocketServer {
 			IdleStateEvent idleStateEvent = (IdleStateEvent) evt;
 			switch (idleStateEvent.state()) {
 			case READER_IDLE:
-				System.out.println("read idle");
+				log.info("【sessionId:{}】onEvent read idle!", session.id());
 				break;
 			case WRITER_IDLE:
-				System.out.println("write idle");
+				log.info("【sessionId:{}】onEvent write idle!", session.id());
 				break;
 			case ALL_IDLE:
-				System.out.println("all idle");
+				log.info("【sessionId:{}】onEvent all idle!", session.id());
 				break;
 			default:
 				break;
@@ -285,6 +283,7 @@ public class WebSocketServer {
 			try {
 				item.sendMessage(message);
 			} catch (IOException e) {
+				log.error("【message:{}】sendMsgToAnyone error! {}", message, e);
 				return JsonResult.error(ApigateRetCode.SYSTEM_EXCEPTION);
 			}
 		}

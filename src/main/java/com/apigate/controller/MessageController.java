@@ -1,11 +1,14 @@
 package com.apigate.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.apigate.config.RedisChannelConfig;
 import com.apigate.util.JsonResult;
 import com.apigate.ws.WebSocketServer;
 
@@ -25,6 +28,26 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/msg")
 public class MessageController {
+
+	@Autowired
+	private StringRedisTemplate stringRedisTemplate;
+
+	/**
+	 * 
+	 * @Description： 根据用户ID下发消息-集群
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年9月28日下午1:29:24]
+	 * @param uid
+	 * @param message
+	 * @return
+	 *
+	 */
+	@PostMapping("/cluster/push/{uid}")
+	public JsonResult pushClusterhMessage(@PathVariable("uid") String uid, JSONObject message) {
+		stringRedisTemplate.convertAndSend(RedisChannelConfig.topic, JSONUtil.toJsonStr(message));
+		return JsonResult.success();
+	}
 
 	/**
 	 * 
@@ -62,6 +85,29 @@ public class MessageController {
 	public JsonResult pushMessage(@PathVariable("uid") String uid) {
 		JSONObject message = JSONUtil.createObj().set("uid", uid);
 		return WebSocketServer.sendMsgByUserId(message, uid);
+	}
+
+	/**
+	 * 
+	 * @Description： 测试消息下发,把工程端口号修改,再启动一个服务
+	 * 
+	 * MSG：{"processCode":"login","uid":"xxxxx"}
+	 * 
+	 * MSG：{"processCode":"logout","uid":"xxxxx"}
+	 * 
+	 * URL：localhost:8081/api/msg/cluster/push/xxxxx
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年8月2日下午4:59:09]
+	 * @param uid
+	 * @return
+	 *
+	 */
+	@GetMapping("/cluster/push/{uid}")
+	public JsonResult pushClusterhMessage(@PathVariable("uid") String uid) {
+		JSONObject message = JSONUtil.createObj().set("uid", uid);
+		stringRedisTemplate.convertAndSend(RedisChannelConfig.topic, JSONUtil.toJsonStr(message));
+		return JsonResult.success();
 	}
 
 	/**
