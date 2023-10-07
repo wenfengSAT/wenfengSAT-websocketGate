@@ -14,7 +14,6 @@ import com.apigate.ws.WebSocketServer;
 
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 
@@ -24,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
  * @Modified By： [修改人] on [修改日期] for [修改说明]
  *
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/msg")
 public class MessageController {
@@ -51,7 +49,7 @@ public class MessageController {
 
 	/**
 	 * 
-	 * @Description： 根据用户ID下发消息
+	 * @Description： 根据用户ID下发消息-单机
 	 * 
 	 * @author [ wenfengSAT@163.com ]
 	 * @Date [2023年8月2日下午5:40:53]

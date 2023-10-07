@@ -167,7 +167,6 @@ public class WebSocketServer {
 	public void onBinary(Session session, byte[] bytes) {
 		String hexStr = HexUtil.encodeHexStr(bytes, false);
 		log.info("【sessionId:{}】onBinary message:{}!", session.id(), hexStr);
-		session.sendBinary(bytes);
 	}
 
 	/**
@@ -253,7 +252,7 @@ public class WebSocketServer {
 
 	/**
 	 * 
-	 * @Description： 实现服务器主动推送
+	 * @Description： 实现服务器主动推送文本信息
 	 * 
 	 * @author [ wenfengSAT@163.com ]
 	 * @Date [2023年8月1日下午4:13:34]
@@ -264,6 +263,21 @@ public class WebSocketServer {
 	 */
 	public ChannelFuture sendMessage(JSONObject message) throws IOException {
 		return this.session.sendText(message.toString());
+	}
+
+	/**
+	 * 
+	 * @Description： 实现服务器主动推送字节消息
+	 * 
+	 * @author [ wenfengSAT@163.com ]
+	 * @Date [2023年10月7日下午2:08:12]
+	 * @param bytes
+	 * @return
+	 * @throws IOException
+	 *
+	 */
+	public ChannelFuture sendBytes(byte[] bytes) throws IOException {
+		return this.session.sendBinary(bytes);
 	}
 
 	/**
@@ -323,7 +337,7 @@ public class WebSocketServer {
 					future.addListener(new ChannelFutureListener() {
 						@Override
 						public void operationComplete(ChannelFuture future) throws Exception {
-							log.debug("【userId:{}】sendMsgByUserId success", userId);
+							log.info("【userId:{}】sendMsgByUserId success", userId);
 						}
 					});
 				}

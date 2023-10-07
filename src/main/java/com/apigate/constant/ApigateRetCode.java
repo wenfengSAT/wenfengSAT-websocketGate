@@ -33,6 +33,7 @@ public enum ApigateRetCode implements CodeEnum {
     PROCESS_CODE_ERROR(606, "指令错误错误！"),
     
     MSG_SEND_ERROR(700, "消息下发失败！"),
+    MSG_BODY_NULL(701, "下发消息不能为空！"),
 	;
 
 	private int code;
